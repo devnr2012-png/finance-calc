@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from fpdf import FPDF
-import base64
 
 # Page Configuration
 st.set_page_config(page_title="FinPortal Calculator", page_icon="💼", layout="wide")
@@ -14,19 +13,19 @@ def calculate_pmt(rate_per_period, number_of_periods, present_value):
 def create_pdf(df, title):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", 'B', 14)
+    pdf.set_font("Arial", 'B', 12)
     pdf.cell(190, 10, txt=title, ln=True, align='C')
     pdf.ln(5)
     
     # Table Header
-    pdf.set_font("Arial", 'B', 10)
+    pdf.set_font("Arial", 'B', 9)
     col_widths = [15, 35, 35, 35, 35, 35]
     for i, col in enumerate(df.columns):
-        pdf.cell(col_widths[i], 10, col, border=1, align='C')
+        pdf.cell(col_widths[i], 10, str(col), border=1, align='C')
     pdf.ln()
     
     # Table Data
-    pdf.set_font("Arial", '', 10)
+    pdf.set_font("Arial", '', 9)
     for index, row in df.iterrows():
         for i, val in enumerate(row):
             pdf.cell(col_widths[i], 10, str(val), border=1, align='C')
@@ -34,22 +33,82 @@ def create_pdf(df, title):
         
     return pdf.output(dest='S').encode('latin-1')
 
+def generate_flat_schedule(principal, total_interest, periods):
+    if periods <= 0: return pd.DataFrame()
+    periods = int(round(periods))
+    if periods == 0: periods = 1
+    
+    prin_per = principal / periods
+    int_per = total_interest / periods
+    emi_per = prin_per + int_per
+    
+    data = []
+    out_prin = principal
+    for i in range(1, periods + 1):
+        closing_bal = max(0, out_prin - prin_per)
+        data.append({
+            "Inst.": i,
+            "Opening Bal (₹)": round(out_prin, 2),
+            "Principal (₹)": round(prin_per, 2),
+            "Interest (₹)": round(int_per, 2),
+            "EMI (₹)": round(emi_per, 2),
+            "Closing Bal (₹)": round(closing_bal, 2)
+        })
+        out_prin = closing_bal
+    return pd.DataFrame(data)
+
+def generate_red_schedule(principal, rate_per_period, emi, periods):
+    if periods <= 0: return pd.DataFrame()
+    periods = int(round(periods))
+    if periods == 0: periods = 1
+    
+    data = []
+    out_prin = principal
+    for i in range(1, periods + 1):
+        interest = out_prin * rate_per_period
+        prin = emi - interest
+        closing_bal = max(0, out_prin - prin)
+        data.append({
+            "Inst.": i,
+            "Opening Bal (₹)": round(out_prin, 2),
+            "Principal (₹)": round(prin, 2),
+            "Interest (₹)": round(interest, 2),
+            "EMI (₹)": round(emi, 2),
+            "Closing Bal (₹)": round(closing_bal, 2)
+        })
+        out_prin = closing_bal
+    return pd.DataFrame(data)
+
+def render_schedule_ui(df, title, key_prefix):
+    st.dataframe(df, use_container_width=True)
+    col_dl1, col_dl2 = st.columns([1, 5])
+    with col_dl1:
+        try:
+            pdf_bytes = create_pdf(df, title)
+            st.download_button(label="📄 Download PDF", data=pdf_bytes, file_name=f"{key_prefix}.pdf", mime="application/pdf", key=f"pdf_{key_prefix}")
+        except Exception:
+            st.error("PDF generation failed.")
+    with col_dl2:
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button(label="📊 Download CSV", data=csv, file_name=f"{key_prefix}.csv", mime="text/csv", key=f"csv_{key_prefix}")
+
+
 # --- Sidebar Inputs ---
 st.sidebar.title("💼 FinPortal")
 st.sidebar.markdown("---")
 st.sidebar.header("Loan Parameters")
 
-loan_amount = st.sidebar.number_input("Loan Amount (Principal) ₹", min_value=0, value=10000, step=1000)
+loan_amount = st.sidebar.number_input("Loan Amount (Principal) ₹", min_value=0.0, value=10000.0, step=1000.0)
 
-# Tenure Setup (Days, Months, Years)
+# Tenure Setup
 tenure_unit = st.sidebar.selectbox("Tenure Unit", ["Days", "Months", "Years"], index=1)
 if tenure_unit == "Days":
-    tenure_value = st.sidebar.number_input("Tenure (in Days)", min_value=1, value=90, step=1)
+    tenure_value = st.sidebar.number_input("Tenure (in Days)", min_value=1.0, value=90.0, step=1.0)
     days = tenure_value
     months = tenure_value / 30
     years = tenure_value / 365
 elif tenure_unit == "Months":
-    tenure_value = st.sidebar.number_input("Tenure (in Months)", min_value=1, value=3, step=1)
+    tenure_value = st.sidebar.number_input("Tenure (in Months)", min_value=1.0, value=3.0, step=1.0)
     days = tenure_value * 30
     months = tenure_value
     years = tenure_value / 12
@@ -64,15 +123,15 @@ pf_rate = st.sidebar.number_input("Processing Fee (%)", min_value=0.0, value=1.0
 
 st.sidebar.markdown("---")
 st.sidebar.header("Calculation Modes Setup")
-red_rate_pa = st.sidebar.number_input("Reducing Interest Rate (% P.A.)", min_value=0.0, value=21.0, step=1.0)
-flat_rate_pa = st.sidebar.number_input("Flat Interest Rate (% P.A.)", min_value=0.0, value=10.0, step=1.0)
+flat_rate_pa = st.sidebar.number_input("Flat Interest Rate (% P.A.)", min_value=0.0, value=12.0, step=1.0)
+red_rate_pa = st.sidebar.number_input("Reducing Interest Rate (% P.A.)", min_value=0.0, value=13.0, step=1.0)
 
 
 # --- Main Dashboard ---
 st.title("Advanced Loan Calculator Dashboard")
 st.markdown("Analyze loan structures with Flat vs. Reducing balance comparisons.")
 
-# Initial Deductions Calculation
+# Initial Deductions
 pf_amount = (loan_amount * pf_rate) / 100
 disbursed_amount = loan_amount - pf_amount
 
@@ -84,8 +143,13 @@ with col2:
 
 st.markdown("---")
 
-# Display Results
+# Display Results & Define Variables
 res_col1, res_col2 = st.columns(2)
+
+# Global Variables for Schedules
+flat_interest = flat_return = flat_daily = flat_weekly = flat_monthly = 0
+emi_monthly = emi_weekly = emi_daily = total_repayment_red = total_interest_red = 0
+monthly_rate = weekly_rate = daily_rate = 0
 
 # --- FLAT CALCULATION ---
 with res_col1:
@@ -123,8 +187,6 @@ with res_col2:
 
         total_repayment_red = emi_monthly * months
         total_interest_red = total_repayment_red - loan_amount
-    else:
-        total_repayment_red = total_interest_red = emi_monthly = emi_weekly = emi_daily = 0
 
     st.metric(label="Total Repayment", value=f"₹{total_repayment_red:,.0f}")
     st.metric(label="Total Interest Generated", value=f"₹{total_interest_red:,.0f}")
@@ -132,55 +194,3 @@ with res_col2:
     st.markdown("#### EMI Breakdown")
     st.success(f"**Daily EMI:** ₹{emi_daily:,.0f}")
     st.success(f"**Weekly EMI:** ₹{emi_weekly:,.0f}")
-    st.success(f"**Monthly EMI:** ₹{emi_monthly:,.0f}")
-
-st.markdown("---")
-
-# --- REPAYMENT SCHEDULE ---
-st.subheader("📅 Monthly Repayment Schedule (Reducing Balance)")
-
-schedule_data = []
-out_prin = loan_amount
-for i in range(1, int(max(1, round(months))) + 1):
-    interest = out_prin * monthly_rate
-    prin = emi_monthly - interest
-    closing_bal = max(0, out_prin - prin)
-    
-    schedule_data.append({
-        "Inst.": i,
-        "Opening Bal (₹)": f"{out_prin:.2f}",
-        "Principal (₹)": f"{prin:.2f}",
-        "Interest (₹)": f"{interest:.2f}",
-        "EMI (₹)": f"{emi_monthly:.2f}",
-        "Closing Bal (₹)": f"{closing_bal:.2f}"
-    })
-    out_prin -= prin
-
-df_schedule = pd.DataFrame(schedule_data)
-st.dataframe(df_schedule, use_container_width=True)
-
-# Export Options
-col_dl1, col_dl2 = st.columns([1, 4])
-
-with col_dl1:
-    # PDF Download Button
-    try:
-        pdf_bytes = create_pdf(df_schedule, "Monthly Repayment Schedule (Reducing Balance)")
-        st.download_button(
-            label="📄 Download PDF",
-            data=pdf_bytes,
-            file_name="Repayment_Schedule.pdf",
-            mime="application/pdf"
-        )
-    except Exception as e:
-        st.error("PDF generation failed. Please ensure 'fpdf' is installed.")
-
-with col_dl2:
-    # CSV Download Button (Fallback)
-    csv = df_schedule.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📊 Download Excel/CSV",
-        data=csv,
-        file_name="Repayment_Schedule.csv",
-        mime="text/csv",
-    )
