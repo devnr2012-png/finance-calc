@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from fpdf import FPDF
-import base64
 
 # Page Configuration
 st.set_page_config(page_title="FinPortal Calculator", page_icon="💼", layout="wide")
@@ -18,14 +17,12 @@ def create_pdf(df, title):
     pdf.cell(190, 10, txt=title, ln=True, align='C')
     pdf.ln(5)
     
-    # Table Header
     pdf.set_font("Arial", 'B', 9)
     col_widths = [15, 35, 35, 35, 35, 35]
     for i, col in enumerate(df.columns):
         pdf.cell(col_widths[i], 10, str(col), border=1, align='C')
     pdf.ln()
     
-    # Table Data
     pdf.set_font("Arial", '', 9)
     for index, row in df.iterrows():
         for i, val in enumerate(row):
@@ -88,7 +85,6 @@ st.sidebar.header("Loan Parameters")
 
 loan_amount = st.sidebar.number_input("Loan Amount (Principal) ₹", min_value=0.0, value=10000.0, step=1000.0)
 
-# Tenure Setup
 tenure_unit = st.sidebar.selectbox("Tenure Unit", ["Days", "Months", "Years"], index=1)
 if tenure_unit == "Days":
     tenure_value = st.sidebar.number_input("Tenure (in Days)", min_value=1.0, value=90.0, step=1.0)
@@ -119,7 +115,6 @@ red_rate_pa = st.sidebar.number_input("Reducing Interest Rate (% P.A.)", min_val
 st.title("Advanced Loan Calculator Dashboard")
 st.markdown("Analyze loan structures with Flat vs. Reducing balance comparisons.")
 
-# Initial Deductions
 pf_amount = (loan_amount * pf_rate) / 100
 disbursed_amount = loan_amount - pf_amount
 
@@ -131,44 +126,31 @@ with col2:
 
 st.markdown("---")
 
-# Global Variables for Schedules
 flat_interest = flat_return = flat_daily = flat_weekly = flat_monthly = 0
 emi_monthly = emi_weekly = emi_daily = total_repayment_red = total_interest_red = 0
 monthly_rate = weekly_rate = daily_rate = 0
 
 res_col1, res_col2 = st.columns(2)
 
-# --- FLAT CALCULATION ---
 with res_col1:
     st.subheader("🟧 Flat Calculation")
-    
     flat_interest = loan_amount * (flat_rate_pa / 100) * years
     flat_return = loan_amount + flat_interest
-    
     flat_daily = flat_return / days if days else 0
     flat_weekly = flat_return / weeks if weeks else 0
     flat_monthly = flat_return / months if months else 0
 
     st.metric(label="Total Expected Return", value=f"₹{flat_return:,.0f}")
     st.metric(label="Total Interest Generated", value=f"₹{flat_interest:,.0f}")
-    
-    st.markdown("#### EMI Breakdown")
-    st.info(f"**Daily EMI:** ₹{flat_daily:,.0f}")
-    st.info(f"**Weekly EMI:** ₹{flat_weekly:,.0f}")
-    st.info(f"**Monthly EMI:** ₹{flat_monthly:,.0f}")
+    st.info(f"**Daily EMI:** ₹{flat_daily:,.0f}\n\n**Weekly EMI:** ₹{flat_weekly:,.0f}\n\n**Monthly EMI:** ₹{flat_monthly:,.0f}")
 
-
-# --- REDUCING CALCULATION ---
 with res_col2:
     st.subheader("🟩 Reducing Balance")
-    
     if red_rate_pa > 0 and days > 0:
         monthly_rate = (red_rate_pa / 12) / 100
         emi_monthly = calculate_pmt(monthly_rate, months, loan_amount)
-        
         weekly_rate = (red_rate_pa / 52) / 100
         emi_weekly = calculate_pmt(weekly_rate, weeks, loan_amount)
-        
         daily_rate = (red_rate_pa / 365) / 100
         emi_daily = calculate_pmt(daily_rate, days, loan_amount)
 
@@ -177,11 +159,7 @@ with res_col2:
 
     st.metric(label="Total Repayment", value=f"₹{total_repayment_red:,.0f}")
     st.metric(label="Total Interest Generated", value=f"₹{total_interest_red:,.0f}")
-    
-    st.markdown("#### EMI Breakdown")
-    st.success(f"**Daily EMI:** ₹{emi_daily:,.0f}")
-    st.success(f"**Weekly EMI:** ₹{emi_weekly:,.0f}")
-    st.success(f"**Monthly EMI:** ₹{emi_monthly:,.0f}")
+    st.success(f"**Daily EMI:** ₹{emi_daily:,.0f}\n\n**Weekly EMI:** ₹{emi_weekly:,.0f}\n\n**Monthly EMI:** ₹{emi_monthly:,.0f}")
 
 st.markdown("---")
 
@@ -198,44 +176,30 @@ with sel_col2:
 df_schedule = pd.DataFrame()
 schedule_title = f"{sch_method} - {sch_freq} Schedule"
 
-# Generate based on selection
 if sch_method == "Flat Calculation":
-    if sch_freq == "Daily":
-        df_schedule = generate_flat_schedule(loan_amount, flat_interest, days)
-    elif sch_freq == "Weekly":
-        df_schedule = generate_flat_schedule(loan_amount, flat_interest, weeks)
-    elif sch_freq == "Monthly":
-        df_schedule = generate_flat_schedule(loan_amount, flat_interest, months)
+    if sch_freq == "Daily": df_schedule = generate_flat_schedule(loan_amount, flat_interest, days)
+    elif sch_freq == "Weekly": df_schedule = generate_flat_schedule(loan_amount, flat_interest, weeks)
+    elif sch_freq == "Monthly": df_schedule = generate_flat_schedule(loan_amount, flat_interest, months)
 else:
-    if sch_freq == "Daily":
-        df_schedule = generate_red_schedule(loan_amount, daily_rate, emi_daily, days)
-    elif sch_freq == "Weekly":
-        df_schedule = generate_red_schedule(loan_amount, weekly_rate, emi_weekly, weeks)
-    elif sch_freq == "Monthly":
-        df_schedule = generate_red_schedule(loan_amount, monthly_rate, emi_monthly, months)
+    if sch_freq == "Daily": df_schedule = generate_red_schedule(loan_amount, daily_rate, emi_daily, days)
+    elif sch_freq == "Weekly": df_schedule = generate_red_schedule(loan_amount, weekly_rate, emi_weekly, weeks)
+    elif sch_freq == "Monthly": df_schedule = generate_red_schedule(loan_amount, monthly_rate, emi_monthly, months)
 
 if not df_schedule.empty:
     st.dataframe(df_schedule, use_container_width=True)
     
-    dl_col1, dl_col2 = st.columns([1, 4])
-    
-    with dl_col1:
-        try:
-            pdf_bytes = create_pdf(df_schedule, schedule_title)
-            st.download_button(
-                label="📄 Download PDF",
-                data=pdf_bytes,
-                file_name=f"{schedule_title.replace(' ', '_')}.pdf",
-                mime="application/pdf"
-            )
-        except Exception as e:
-            st.error("PDF module failed. Check requirements.txt for 'fpdf'.")
-            
-    with dl_col2:
-        csv = df_schedule.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📊 Download Excel/CSV",
-            data=csv,
-            file_name=f"{schedule_title.replace(' ', '_')}.csv",
-            mime="text/csv",
-        )
+    # HTML Generator
+    html_table = df_schedule.to_html(index=False, classes="schedule-table")
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>{schedule_title}</title>
+        <style>
+            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f9fafb; }}
+            .container {{ max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+            h2 {{ text-align: center; color: #1e3a8a; margin-bottom: 20px; }}
+            table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
+            th, td {{ border: 1px solid #e5e7eb; padding: 12px; text-align: center; }}
+            th {{ background-color: #f3f4f6; color: #374151; font-weight: 600; }}
+            tr:nth-child(even) {{ background-color: #f9
