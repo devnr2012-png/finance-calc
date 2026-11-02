@@ -188,18 +188,28 @@ else:
 if not df_schedule.empty:
     st.dataframe(df_schedule, use_container_width=True)
     
+    # Fixed CSS handling to avoid Streamlit bracket parsing errors
+    css_style = """
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f9fafb; }
+    .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #1e3a8a; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: center; }
+    th { background-color: #f3f4f6; color: #374151; font-weight: 600; }
+    tr:nth-child(even) { background-color: #f9fafb; }
+    .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #6b7280; }
+    """
+
     # HTML Generator
     html_table = df_schedule.to_html(index=False, classes="schedule-table")
-    html_content = f"""
-    <!DOCTYPE html>
+    html_content = f"""<!DOCTYPE html>
     <html>
     <head>
         <title>{schedule_title}</title>
-        <style>
-            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f9fafb; }}
-            .container {{ max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-            h2 {{ text-align: center; color: #1e3a8a; margin-bottom: 20px; }}
-            table {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
-            th, td {{ border: 1px solid #e5e7eb; padding: 12px; text-align: center; }}
-            th {{ background-color: #f3f4f6; color: #374151; font-weight: 600; }}
-            tr:nth-child(even) {{ background-color: #f9
+        <style>{css_style}</style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>{schedule_title}</h2>
+            {html_table}
+            <div class="footer">Generated via FinPortal Calculator &bull; Print this page (Ctrl+P) to save as PDF</div>
