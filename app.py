@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from fpdf import FPDF
+import base64
 
 # Page Configuration
 st.set_page_config(page_title="FinPortal Calculator", page_icon="💼", layout="wide")
@@ -48,11 +49,11 @@ def generate_flat_schedule(principal, total_interest, periods):
         closing_bal = max(0, out_prin - prin_per)
         data.append({
             "Inst.": i,
-            "Opening Bal (₹)": round(out_prin, 2),
-            "Principal (₹)": round(prin_per, 2),
-            "Interest (₹)": round(int_per, 2),
-            "EMI (₹)": round(emi_per, 2),
-            "Closing Bal (₹)": round(closing_bal, 2)
+            "Opening Bal (₹)": f"{out_prin:.2f}",
+            "Principal (₹)": f"{prin_per:.2f}",
+            "Interest (₹)": f"{int_per:.2f}",
+            "EMI (₹)": f"{emi_per:.2f}",
+            "Closing Bal (₹)": f"{closing_bal:.2f}"
         })
         out_prin = closing_bal
     return pd.DataFrame(data)
@@ -70,27 +71,14 @@ def generate_red_schedule(principal, rate_per_period, emi, periods):
         closing_bal = max(0, out_prin - prin)
         data.append({
             "Inst.": i,
-            "Opening Bal (₹)": round(out_prin, 2),
-            "Principal (₹)": round(prin, 2),
-            "Interest (₹)": round(interest, 2),
-            "EMI (₹)": round(emi, 2),
-            "Closing Bal (₹)": round(closing_bal, 2)
+            "Opening Bal (₹)": f"{out_prin:.2f}",
+            "Principal (₹)": f"{prin:.2f}",
+            "Interest (₹)": f"{interest:.2f}",
+            "EMI (₹)": f"{emi:.2f}",
+            "Closing Bal (₹)": f"{closing_bal:.2f}"
         })
         out_prin = closing_bal
     return pd.DataFrame(data)
-
-def render_schedule_ui(df, title, key_prefix):
-    st.dataframe(df, use_container_width=True)
-    col_dl1, col_dl2 = st.columns([1, 5])
-    with col_dl1:
-        try:
-            pdf_bytes = create_pdf(df, title)
-            st.download_button(label="📄 Download PDF", data=pdf_bytes, file_name=f"{key_prefix}.pdf", mime="application/pdf", key=f"pdf_{key_prefix}")
-        except Exception:
-            st.error("PDF generation failed.")
-    with col_dl2:
-        csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button(label="📊 Download CSV", data=csv, file_name=f"{key_prefix}.csv", mime="text/csv", key=f"csv_{key_prefix}")
 
 
 # --- Sidebar Inputs ---
@@ -143,13 +131,12 @@ with col2:
 
 st.markdown("---")
 
-# Display Results & Define Variables
-res_col1, res_col2 = st.columns(2)
-
 # Global Variables for Schedules
 flat_interest = flat_return = flat_daily = flat_weekly = flat_monthly = 0
 emi_monthly = emi_weekly = emi_daily = total_repayment_red = total_interest_red = 0
 monthly_rate = weekly_rate = daily_rate = 0
+
+res_col1, res_col2 = st.columns(2)
 
 # --- FLAT CALCULATION ---
 with res_col1:
@@ -194,3 +181,61 @@ with res_col2:
     st.markdown("#### EMI Breakdown")
     st.success(f"**Daily EMI:** ₹{emi_daily:,.0f}")
     st.success(f"**Weekly EMI:** ₹{emi_weekly:,.0f}")
+    st.success(f"**Monthly EMI:** ₹{emi_monthly:,.0f}")
+
+st.markdown("---")
+
+# --- INTERACTIVE REPAYMENT SCHEDULE SECTION ---
+st.subheader("📅 Repayment Schedule & Downloads")
+st.write("Select the calculation method and frequency to generate the schedule.")
+
+sel_col1, sel_col2 = st.columns(2)
+with sel_col1:
+    sch_method = st.selectbox("Select Interest Method:", ["Flat Calculation", "Reducing Balance"])
+with sel_col2:
+    sch_freq = st.selectbox("Select Repayment Frequency:", ["Daily", "Weekly", "Monthly"])
+
+df_schedule = pd.DataFrame()
+schedule_title = f"{sch_method} - {sch_freq} Schedule"
+
+# Generate based on selection
+if sch_method == "Flat Calculation":
+    if sch_freq == "Daily":
+        df_schedule = generate_flat_schedule(loan_amount, flat_interest, days)
+    elif sch_freq == "Weekly":
+        df_schedule = generate_flat_schedule(loan_amount, flat_interest, weeks)
+    elif sch_freq == "Monthly":
+        df_schedule = generate_flat_schedule(loan_amount, flat_interest, months)
+else:
+    if sch_freq == "Daily":
+        df_schedule = generate_red_schedule(loan_amount, daily_rate, emi_daily, days)
+    elif sch_freq == "Weekly":
+        df_schedule = generate_red_schedule(loan_amount, weekly_rate, emi_weekly, weeks)
+    elif sch_freq == "Monthly":
+        df_schedule = generate_red_schedule(loan_amount, monthly_rate, emi_monthly, months)
+
+if not df_schedule.empty:
+    st.dataframe(df_schedule, use_container_width=True)
+    
+    dl_col1, dl_col2 = st.columns([1, 4])
+    
+    with dl_col1:
+        try:
+            pdf_bytes = create_pdf(df_schedule, schedule_title)
+            st.download_button(
+                label="📄 Download PDF",
+                data=pdf_bytes,
+                file_name=f"{schedule_title.replace(' ', '_')}.pdf",
+                mime="application/pdf"
+            )
+        except Exception as e:
+            st.error("PDF module failed. Check requirements.txt for 'fpdf'.")
+            
+    with dl_col2:
+        csv = df_schedule.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📊 Download Excel/CSV",
+            data=csv,
+            file_name=f"{schedule_title.replace(' ', '_')}.csv",
+            mime="text/csv",
+        )
