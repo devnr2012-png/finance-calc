@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance App Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .glass-panel { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col hidden md:flex">
+        <div class="h-16 flex items-center px-6 border-b border-slate-700">
+            <i class="fas fa-wallet text-blue-400 text-2xl mr-3"></i>
+            <span class="text-xl font-bold tracking-wider">FinPortal</span>
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <a href="#" class="flex items-center px-4 py-3 bg-blue-600 rounded-lg text-white font-medium">
+                <i class="fas fa-calculator w-6"></i> Loan Calculator
+            </a>
+            <a href="#" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                <i class="fas fa-chart-line w-6"></i> Dashboard
+            </a>
+            <a href="#" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-800 rounded-lg transition">
+                <i class="fas fa-users w-6"></i> Clients
+            </a>
+        </nav>
+        <div class="p-4 border-t border-slate-700">
+            <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center font-bold">
+                    ME
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium">Manager</p>
+                    <p class="text-xs text-slate-400">Finance Dept.</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col h-screen overflow-y-auto">
+        <!-- Top Header -->
+        <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6 lg:px-10 z-10">
+            <h1 class="text-2xl font-bold text-gray-800">Advanced Loan Calculator</h1>
+            <button class="md:hidden text-gray-600"><i class="fas fa-bars text-xl"></i></button>
+        </header>
+
+        <!-- Calculator Layout -->
+        <main class="p-6 lg:p-10 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Input Section -->
+            <div class="glass-panel p-6 lg:col-span-5 h-fit">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800">Loan Parameters</h2>
+                    <button onclick="resetForm()" class="text-sm text-blue-600 hover:underline"><i class="fas fa-redo text-xs"></i> Reset</button>
+                </div>
+
+                <!-- Presets -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-600 mb-2">Quick Presets</label>
+                    <div class="flex gap-2 text-sm">
+                        <button onclick="setPreset(10000, 90, 13000, 1)" class="px-3 py-1 bg-slate-100 hover:bg-blue-100 text-slate-700 rounded border border-slate-200 transition">₹10K / 90 Days</button>
+                        <button onclick="setPreset(50000, 180, 60000, 2)" class="px-3 py-1 bg-slate-100 hover:bg-blue-100 text-slate-700 rounded border border-slate-200 transition">₹50K / 180 Days</button>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Loan Amount (Principal) ₹</label>
+                        <input type="number" id="loanAmount" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="10000" oninput="calculate()">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tenure (in Days)</label>
+                            <input type="number" id="tenureDays" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="90" oninput="calculate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Processing Fee (%)</label>
+                            <input type="number" id="pfRate" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="1" oninput="calculate()">
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-gray-100">
+                        <h3 class="text-sm font-semibold text-gray-800 mb-3">Calculation Modes Setup</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Flat Expected Return Amount ₹</label>
+                                <p class="text-xs text-gray-500 mb-1">Total repayment (Principal + Flat Interest)</p>
+                                <input type="number" id="flatReturn" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="13000" oninput="calculate()">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Reducing Interest Rate (% P.A.)</label>
+                                <input type="number" id="reducingRate" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="36" oninput="calculate()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- Initial Deductions Card -->
+                <div class="glass-panel p-6 bg-blue-50 border border-blue-100">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="text-sm font-medium text-blue-800">Processing Fees Deduction</h3>
+                            <p class="text-2xl font-bold text-blue-900 mt-1">₹<span id="resPfAmount">0</span></p>
+                        </div>
+                        <div class="text-right">
+                            <h3 class="text-sm font-medium text-blue-800">Actual Disbursed Amount</h3>
+                            <p class="text-2xl font-bold text-green-600 mt-1">₹<span id="resDisbursed">0</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Split Results: Flat vs Reducing -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- Flat Rate Results -->
+                    <div class="glass-panel p-6 border-t-4 border-orange-400">
+                        <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-equals text-orange-400 mr-2"></i> Flat Calculation
+                        </h2>
+                        
+                        <div class="mb-4 pb-4 border-b border-gray-100">
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm text-gray-600">Total Return:</span>
+                                <span class="font-semibold">₹<span id="resFlatTotal">0</span></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-600">Total Interest:</span>
+                                <span class="font-semibold text-orange-600">₹<span id="resFlatInterest">0</span></span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-700">Daily EMI</span>
+                                <span class="font-bold text-gray-900">₹<span id="resFlatDaily">0</span></span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-700">Weekly EMI</span>
+                                <span class="font-bold text-gray-900">₹<span id="resFlatWeekly">0</span></span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-700">Monthly EMI</span>
+                                <span class="font-bold text-gray-900">₹<span id="resFlatMonthly">0</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reducing Rate Results -->
+                    <div class="glass-panel p-6 border-t-4 border-emerald-400">
+                        <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-chart-line text-emerald-500 mr-2"></i> Reducing Balance
+                        </h2>
+                        
+                        <div class="mb-4 pb-4 border-b border-gray-100">
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm text-gray-600">Total Repayment:</span>
+                                <span class="font-semibold">₹<span id="resRedTotal">0</span></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-600">Total Interest:</span>
+                                <span class="font-semibold text-emerald-600">₹<span id="resRedInterest">0</span></span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-700">Daily EMI</span>
+                                <span class="font-bold text-gray-900">₹<span id="resRedDaily">0</span></span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-700">Weekly EMI</span>
+                                <span class="font-bold text-gray-900">₹<span id="resRedWeekly">0</span></span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
+                                <span class="text-sm font-medium text-gray-700">Monthly EMI</span>
+                                <span class="font-bold text-gray-900">₹<span id="resRedMonthly">0</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function setPreset(amount, days, flatReturn, pf) {
+            document.getElementById('loanAmount').value = amount;
+            document.getElementById('tenureDays').value = days;
+            document.getElementById('flatReturn').value = flatReturn;
+            document.getElementById('pfRate').value = pf;
+            document.getElementById('reducingRate').value = 36; // Default 36% PA for preset example
+            calculate();
+        }
+
+        function resetForm() {
+            document.querySelectorAll('input').forEach(input => input.value = '');
+            calculate();
+        }
+
+        function formatCurrency(number) {
+            return parseFloat(number).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        }
+
+        function calculatePMT(ratePerPeriod, numberOfPeriods, presentValue) {
+            if(ratePerPeriod === 0) return presentValue / numberOfPeriods;
+            return (presentValue * ratePerPeriod * Math.pow(1 + ratePerPeriod, numberOfPeriods)) / (Math.pow(1 + ratePerPeriod, numberOfPeriods) - 1);
+        }
+
+        function calculate() {
+            // Get values
+            const p = parseFloat(document.getElementById('loanAmount').value) || 0;
+            const days = parseFloat(document.getElementById('tenureDays').value) || 0;
+            const pfRate = parseFloat(document.getElementById('pfRate').value) || 0;
+            const flatRet = parseFloat(document.getElementById('flatReturn').value) || 0;
+            const redRatePA = parseFloat(document.getElementById('reducingRate').value) || 0;
+
+            // Processing Fee & Disbursal
+            const pfAmount = (p * pfRate) / 100;
+            const disbursed = p - pfAmount;
+            
+            document.getElementById('resPfAmount').textContent = formatCurrency(pfAmount);
+            document.getElementById('resDisbursed').textContent = formatCurrency(disbursed);
+
+            if(p > 0 && days > 0) {
+                const months = days / 30;
+                const weeks = days / 7;
+
+                // --- FLAT CALCULATION ---
+                if(flatRet > 0) {
+                    const flatInterest = flatRet - p;
+                    document.getElementById('resFlatTotal').textContent = formatCurrency(flatRet);
+                    document.getElementById('resFlatInterest').textContent = formatCurrency(flatInterest > 0 ? flatInterest : 0);
+                    
+                    document.getElementById('resFlatDaily').textContent = formatCurrency(flatRet / days);
+                    document.getElementById('resFlatWeekly').textContent = formatCurrency(flatRet / weeks);
+                    document.getElementById('resFlatMonthly').textContent = formatCurrency(flatRet / months);
+                } else {
+                    ['resFlatTotal','resFlatInterest','resFlatDaily','resFlatWeekly','resFlatMonthly'].forEach(id => document.getElementById(id).textContent = '0');
+                }
+
+                // --- REDUCING CALCULATION ---
+                if(redRatePA > 0) {
+                    // Monthly Calculation
+                    const monthlyRate = (redRatePA / 12) / 100;
+                    const emiMonthly = calculatePMT(monthlyRate, months, p);
+                    
+                    // Weekly Calculation
+                    const weeklyRate = (redRatePA / 52) / 100;
+                    const emiWeekly = calculatePMT(weeklyRate, weeks, p);
+                    
+                    // Daily Calculation
+                    const dailyRate = (redRatePA / 365) / 100;
+                    const emiDaily = calculatePMT(dailyRate, days, p);
+
+                    // For total display, we use Monthly basis standard as typical in banking
+                    const totalRepayment = emiMonthly * months;
+                    const totalInterestRed = totalRepayment - p;
+
+                    document.getElementById('resRedTotal').textContent = formatCurrency(totalRepayment);
+                    document.getElementById('resRedInterest').textContent = formatCurrency(totalInterestRed);
+                    document.getElementById('resRedMonthly').textContent = formatCurrency(emiMonthly);
+                    document.getElementById('resRedWeekly').textContent = formatCurrency(emiWeekly);
+                    document.getElementById('resRedDaily').textContent = formatCurrency(emiDaily);
+                } else {
+                    ['resRedTotal','resRedInterest','resRedDaily','resRedWeekly','resRedMonthly'].forEach(id => document.getElementById(id).textContent = '0');
+                }
+            } else {
+                ['resFlatTotal','resFlatInterest','resFlatDaily','resFlatWeekly','resFlatMonthly',
+                 'resRedTotal','resRedInterest','resRedDaily','resRedWeekly','resRedMonthly'].forEach(id => document.getElementById(id).textContent = '0');
+            }
+        }
+        
+        // Init with default values from user's screenshot
+        setPreset(10000, 90, 13000, 1);
+    </script>
+</body>
+</html>
