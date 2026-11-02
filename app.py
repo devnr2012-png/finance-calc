@@ -17,12 +17,14 @@ def create_pdf(df, title):
     pdf.cell(190, 10, txt=title, ln=True, align='C')
     pdf.ln(5)
     
+    # Table Header
     pdf.set_font("Arial", 'B', 9)
     col_widths = [15, 35, 35, 35, 35, 35]
     for i, col in enumerate(df.columns):
         pdf.cell(col_widths[i], 10, str(col), border=1, align='C')
     pdf.ln()
     
+    # Table Data
     pdf.set_font("Arial", '', 9)
     for index, row in df.iterrows():
         for i, val in enumerate(row):
@@ -85,6 +87,7 @@ st.sidebar.header("Loan Parameters")
 
 loan_amount = st.sidebar.number_input("Loan Amount (Principal) ₹", min_value=0.0, value=10000.0, step=1000.0)
 
+# Tenure Setup
 tenure_unit = st.sidebar.selectbox("Tenure Unit", ["Days", "Months", "Years"], index=1)
 if tenure_unit == "Days":
     tenure_value = st.sidebar.number_input("Tenure (in Days)", min_value=1.0, value=90.0, step=1.0)
@@ -115,30 +118,5 @@ red_rate_pa = st.sidebar.number_input("Reducing Interest Rate (% P.A.)", min_val
 st.title("Advanced Loan Calculator Dashboard")
 st.markdown("Analyze loan structures with Flat vs. Reducing balance comparisons.")
 
-pf_amount = (loan_amount * pf_rate) / 100
-disbursed_amount = loan_amount - pf_amount
-
-col1, col2 = st.columns(2)
-with col1:
-    st.metric(label="Processing Fees Deduction", value=f"₹{pf_amount:,.0f}", delta=f"{pf_rate}%", delta_color="inverse")
-with col2:
-    st.metric(label="Actual Disbursed Amount", value=f"₹{disbursed_amount:,.0f}")
-
-st.markdown("---")
-
-flat_interest = flat_return = flat_daily = flat_weekly = flat_monthly = 0
-emi_monthly = emi_weekly = emi_daily = total_repayment_red = total_interest_red = 0
-monthly_rate = weekly_rate = daily_rate = 0
-
-res_col1, res_col2 = st.columns(2)
-
-with res_col1:
-    st.subheader("🟧 Flat Calculation")
-    flat_interest = loan_amount * (flat_rate_pa / 100) * years
-    flat_return = loan_amount + flat_interest
-    flat_daily = flat_return / days if days else 0
-    flat_weekly = flat_return / weeks if weeks else 0
-    flat_monthly = flat_return / months if months else 0
-
-    st.metric(label="Total Expected Return", value=f"₹{flat_return:,.0f}")
-    st.metric(label="Total Interest Generated", value=f"₹{flat_interest:,.0f}")
+# Initial Deductions
+pf_amount = (loan_amount * pf_rate)
