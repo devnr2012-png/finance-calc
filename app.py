@@ -1,5 +1,6 @@
 import streamlit as st
 import hashlib
+import time
 
 # 1. Page Configuration (Hamesha sabse upar hona chahiye)
 st.set_page_config(page_title="Vyapar FinPortal", page_icon="💼", layout="wide", initial_sidebar_state="expanded")
@@ -8,7 +9,8 @@ st.set_page_config(page_title="Vyapar FinPortal", page_icon="💼", layout="wide
 try:
     import pandas as pd
 except ImportError:
-    st.error("Pandas error! Kripya 'requirements.txt' me 'pandas' likhein.")
+    st.error("Pandas library missing! Kripya 'requirements.txt' me 'pandas' likhein.")
+    
 try:
     from fpdf import FPDF
 except ImportError:
@@ -141,4 +143,68 @@ if not st.session_state['logged_in']:
                 elif len(new_user) == 0 or len(new_password) == 0:
                     st.error("Please fill all details.")
                 else:
-                    st.
+                    st.session_state['users_db'][new_user] = make_hashes(new_password)
+                    st.session_state['logged_in'] = True
+                    st.session_state['current_user'] = new_user
+                    st.success("Account created successfully!")
+                    time.sleep(1)
+                    safe_rerun()
+
+# ==========================================
+# MAIN DASHBOARD (Visible only after Login)
+# ==========================================
+else:
+    # --- Sidebar ---
+    st.sidebar.title(f"👤 Hi, {st.session_state['current_user']}")
+    if st.sidebar.button("Logout 🚪"):
+        st.session_state['logged_in'] = False
+        safe_rerun()
+        
+    st.sidebar.markdown("---")
+    st.sidebar.header("Loan Parameters")
+
+    loan_amount = st.sidebar.number_input("Loan Amount (Principal) ₹", min_value=0.0, value=10000.0, step=1000.0)
+
+    tenure_unit = st.sidebar.selectbox("Tenure Unit", ["Days", "Months", "Years"], index=1)
+    if tenure_unit == "Days":
+        tenure_value = st.sidebar.number_input("Tenure (in Days)", min_value=1.0, value=90.0, step=1.0)
+        days = tenure_value; months = tenure_value / 30; years = tenure_value / 365
+    elif tenure_unit == "Months":
+        tenure_value = st.sidebar.number_input("Tenure (in Months)", min_value=1.0, value=3.0, step=1.0)
+        days = tenure_value * 30; months = tenure_value; years = tenure_value / 12
+    else:
+        tenure_value = st.sidebar.number_input("Tenure (in Years)", min_value=0.1, value=1.0, step=0.5)
+        days = tenure_value * 365; months = tenure_value * 12; years = tenure_value
+
+    weeks = days / 7
+    pf_rate = st.sidebar.number_input("Processing Fee (%)", min_value=0.0, value=1.0, step=0.1)
+
+    st.sidebar.markdown("---")
+    st.sidebar.header("Calculation Modes Setup")
+    flat_rate_pa = st.sidebar.number_input("Flat Interest Rate (% P.A.)", min_value=0.0, value=12.0, step=1.0)
+    red_rate_pa = st.sidebar.number_input("Reducing Interest Rate (% P.A.)", min_value=0.0, value=13.0, step=1.0)
+
+    # --- Main Calculator UI ---
+    st.title("Advanced Loan Calculator Dashboard")
+    st.markdown("Analyze loan structures with Flat vs. Reducing balance comparisons.")
+
+    pf_amount = (loan_amount * pf_rate) / 100
+    disbursed_amount = loan_amount - pf_amount
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric(label="Processing Fees Deduction", value=f"₹{pf_amount:,.0f}", delta=f"{pf_rate}%", delta_color="inverse")
+    with col2:
+        st.metric(label="Actual Disbursed Amount", value=f"₹{disbursed_amount:,.0f}")
+
+    st.markdown("---")
+
+    flat_interest = flat_return = flat_daily = flat_weekly = flat_monthly = 0
+    emi_monthly = emi_weekly = emi_daily = total_repayment_red = total_interest_red = 0
+    monthly_rate = weekly_rate = daily_rate = 0
+
+    res_col1, res_col2 = st.columns(2)
+
+    with res_col1:
+        st.subheader("🟧 Flat Calculation")
+        flat_interest = loan_amount
