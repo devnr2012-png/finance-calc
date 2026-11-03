@@ -93,12 +93,12 @@ if not st.session_state['logged_in']:
     </style>
     """, unsafe_allow_html=True)
     
-    # 2-Column Split Layout for Login
-    col_img, col_form = st.columns([1.2, 1], gap="large")
+    # Standard Columns (Removed 'gap' parameter to prevent older version TypeError)
+    col_img, col_form = st.columns([1.2, 1])
     
     with col_img:
-        # Left Side: Business/Finance Image
-        st.image("https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=1000&auto=format&fit=crop", use_container_width=True)
+        # Left Side: Business/Finance Image (using use_column_width for stability)
+        st.image("https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=1000&auto=format&fit=crop", use_column_width=True)
         st.markdown("<h3 style='color: #1e3a8a;'>Empowering Your Financial Decisions</h3>", unsafe_allow_html=True)
         st.write("Advanced loan calculation and scheduling tools built for finance professionals and businesses.")
 
@@ -107,5 +107,28 @@ if not st.session_state['logged_in']:
         st.markdown("<h2 style='text-align: center; color: #1e3a8a;'>💼 Vyapar FinPortal</h2>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; margin-bottom: 20px;'>Secure Access</p>", unsafe_allow_html=True)
         
-        # Tabs for better UI (Replaced Dropdown)
-        tab_login, tab_signup = st
+        # Radio button UI prevents 'st.tabs' TypeErrors on older versions
+        action = st.radio("Choose Action:", ["Login", "Sign Up"], horizontal=True)
+        
+        if action == "Login":
+            username = st.text_input("User ID", key="l_user")
+            password = st.text_input("Password", type='password', key="l_pass")
+            if st.button("Login ➔"):
+                if username in st.session_state['users_db'] and check_hashes(password, st.session_state['users_db'][username]):
+                    st.session_state['logged_in'] = True
+                    st.session_state['current_user'] = username
+                    st.rerun()
+                else:
+                    st.error("Incorrect User ID or Password. Try again.")
+                    
+        elif action == "Sign Up":
+            new_user = st.text_input("New User ID", key="s_user")
+            new_password = st.text_input("New Password", type='password', key="s_pass")
+            if st.button("Create Account & Login ➔"):
+                if new_user in st.session_state['users_db']:
+                    st.warning("User ID already exists! Please select Login.")
+                elif len(new_user) == 0 or len(new_password) == 0:
+                    st.error("Please fill all details.")
+                else:
+                    # Save user and auto-login
+                    st.session_state['users_db'][new_user] = make_hashes(new_
